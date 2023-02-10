@@ -12718,6 +12718,10 @@ function getPrintableVal(val) {
   if (Array.isArray(val)) {
     return val.map(v => v === null ? 'null' : v === '' ? '∅' : v.toString().replace(/^ +| +$/g, m => '●'.repeat(m.length)) || '').join(', ');
   }
+  if (typeof val === 'object') {
+    const keys = Object.keys(val);
+    return `{ ${keys[0]}:${val[keys[0]]}${keys.length > 1 ? ',' : ''} ... }`;
+  }
   return val.toString().replace(/^ +| +$/g, m => '●'.repeat(m.length)) || '';
 }
 
@@ -12850,7 +12854,7 @@ function normalizeExamples(examples, dataType = 'string') {
       summary: v.summary || '',
       description: v.description || ''
     }));
-    const exampleVal = exampleList.length > 0 ? exampleList[0].value.toString() : '';
+    const exampleVal = exampleList.length > 0 ? exampleList[0].value : '';
     return {
       exampleVal,
       exampleList
@@ -14796,7 +14800,7 @@ class ApiRequest extends lit_element_s {
 
   /* eslint-disable indent */
   renderExample(example, paramType, paramName) {
-    var _example$value;
+    var _example$value, _example$value2;
     return y`
       ${paramType === 'array' ? '[' : ''}
       <a
@@ -14804,7 +14808,8 @@ class ApiRequest extends lit_element_s {
         style="display:inline-block; min-width:24px; text-align:center"
         class="${this.allowTry === 'true' ? '' : 'inactive-link'}"
         data-example-type="${paramType === 'array' ? paramType : 'string'}"
-        data-example="${example.value && Array.isArray(example.value) ? (_example$value = example.value) === null || _example$value === void 0 ? void 0 : _example$value.join('~|~') : example.value || ''}"
+        data-example="${example.value && Array.isArray(example.value) ? (_example$value = example.value) === null || _example$value === void 0 ? void 0 : _example$value.join('~|~') : (typeof example.value === 'object' ? JSON.stringify(example.value, null, 2) : example.value) || ''}"
+        title="${example.value && Array.isArray(example.value) ? (_example$value2 = example.value) === null || _example$value2 === void 0 ? void 0 : _example$value2.join('~|~') : (typeof example.value === 'object' ? JSON.stringify(example.value, null, 2) : example.value) || ''}"
         @click="${e => {
       const inputEl = e.target.closest('table').querySelector(`[data-pname="${paramName}"]`);
       if (inputEl) {
@@ -14947,7 +14952,7 @@ class ApiRequest extends lit_element_s {
                             data-param-allow-reserved = "${paramAllowReserved}"
                             data-x-fill-example = "${param['x-fill-example'] || 'yes'}"
                             spellcheck = "false"
-                            .textContent="${param['x-fill-example'] === 'no' ? '' : live_l(this.fillRequestFieldsWithExample === 'true' ? example.exampleVal : '')}"
+                            .textContent="${param['x-fill-example'] === 'no' ? '' : live_l(this.fillRequestFieldsWithExample === 'true' ? typeof example.exampleVal === 'object' ? JSON.stringify(example.exampleVal, null, 2) : example.exampleVal : '')}"
                             style = "resize:vertical; width:100%; height: ${'read focused'.includes(this.renderStyle) ? '180px' : '120px'};"
                             @input=${e => {
         const requestPanelEl = this.getRequestPanel(e);
@@ -15652,7 +15657,8 @@ class ApiRequest extends lit_element_s {
           let queryParamObj = {};
           const {
             paramSerializeStyle,
-            paramSerializeExplode
+            paramSerializeExplode,
+            pname
           } = el.dataset;
           queryParamObj = Object.assign(queryParamObj, JSON.parse(el.value.replace(/\s+/g, ' ')));
           if (el.dataset.paramAllowReserved === 'true') {
@@ -15666,25 +15672,26 @@ class ApiRequest extends lit_element_s {
             }
           } else {
             for (const key in queryParamObj) {
+              const pKey = `${pname}[${key}]`;
               if (typeof queryParamObj[key] === 'object') {
                 if (Array.isArray(queryParamObj[key])) {
                   if (paramSerializeStyle === 'spaceDelimited') {
-                    queryParam.append(key, queryParamObj[key].join(' '));
+                    queryParam.append(pKey, queryParamObj[key].join(' '));
                   } else if (paramSerializeStyle === 'pipeDelimited') {
-                    queryParam.append(key, queryParamObj[key].join('|'));
+                    queryParam.append(pKey, queryParamObj[key].join('|'));
                   } else {
                     if (paramSerializeExplode === 'true') {
                       // eslint-disable-line no-lonely-if
                       queryParamObj[key].forEach(v => {
-                        queryParam.append(key, v);
+                        queryParam.append(pKey, v);
                       });
                     } else {
-                      queryParam.append(key, queryParamObj[key]);
+                      queryParam.append(pKey, queryParamObj[key]);
                     }
                   }
                 }
               } else {
-                queryParam.append(key, queryParamObj[key]);
+                queryParam.append(pKey, queryParamObj[key]);
               }
             }
           }
@@ -26661,7 +26668,7 @@ function getType(str) {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("58f69ab8c977033c5164")
+/******/ 		__webpack_require__.h = () => ("b9e441b47df14f0572c5")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */
