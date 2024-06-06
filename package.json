@@ -38,6 +38,7 @@
     "buffer": "^6.0.3",
     "lit": "^2.7.5",
     "marked": "^5.1.0",
+    "marked-highlight": "^2.1.1",
     "prismjs": "^1.29.0",
     "xml-but-prettier": "^1.0.1"
   },

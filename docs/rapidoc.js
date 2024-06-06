@@ -4152,7 +4152,6 @@ customize their theme. Simply add your css to this file and yarn build.
 */
 
 /* harmony default export */ const custom_styles = (i`
-
 `);
 ;// CONCATENATED MODULE: ./src/utils/common-utils.js
 /* For Delayed Event Handler Execution */
@@ -4372,9 +4371,9 @@ async function ProcessSpec(specUrl, generateMissingTags = false, sortTags = fals
     }
 
     await sleep(0); // important to show the initial loader (allows for rendering updates)
-
     // If  JSON Schema Viewer
     if ((_specMeta$resolvedSpe = specMeta.resolvedSpec) !== null && _specMeta$resolvedSpe !== void 0 && _specMeta$resolvedSpe.jsonSchemaViewer && (_specMeta$resolvedSpe2 = specMeta.resolvedSpec) !== null && _specMeta$resolvedSpe2 !== void 0 && _specMeta$resolvedSpe2.schemaAndExamples) {
+      console.log(specMeta);
       this.dispatchEvent(new CustomEvent('before-render', {
         detail: {
           spec: specMeta.resolvedSpec
@@ -8188,7 +8187,7 @@ class ApiRequest extends lit_element_s {
                     data-example = "${Array.isArray(fieldExamples) ? fieldExamples.join('~|~') : fieldExamples}"
                     data-array = "true"
                     placeholder = "add-multiple &#x21a9;"
-                    .value = "${Array.isArray(fieldExamples) ? Array.isArray(fieldExamples[0]) ? fieldExamples[0] : [fieldExamples[0]] : [fieldExamples]}"
+                    .value = "${Array.isArray(fieldExamples) ? Array.isArray(fieldExamples[0]) ? fieldExamples[0] : fieldExamples : []}"
                   >
                   </tag-input>
                 ` : lit_html_x`
@@ -8312,12 +8311,13 @@ class ApiRequest extends lit_element_s {
         </div>
         ${this.responseIsBlob ? lit_html_x`
             <div class="tab-content col" style="flex:1; display:${this.activeResponseTab === 'response' ? 'flex' : 'none'};">
+              ${this.responseBlobType === 'image' ? lit_html_x`<img style="max-height:var(--resp-area-height, 400px); object-fit:contain;" class="mar-top-8" src="${this.responseBlobUrl}"></img>` : ''}  
               <button class="m-btn thin-border mar-top-8" style="width:135px" @click='${e => {
       downloadResource(this.responseBlobUrl, this.respContentDisposition, e);
     }}' part="btn btn-outline">
                 DOWNLOAD
               </button>
-              ${this.responseBlobType === 'view' ? lit_html_x`<button class="m-btn thin-border mar-top-8" style="width:135px"  @click='${e => {
+              ${this.responseBlobType === 'view' || this.responseBlobType === 'image' ? lit_html_x`<button class="m-btn thin-border mar-top-8" style="width:135px"  @click='${e => {
       viewResource(this.responseBlobUrl, e);
     }}' part="btn btn-outline">VIEW (NEW TAB)</button>` : ''}
             </div>` : lit_html_x`
@@ -8712,6 +8712,22 @@ class ApiRequest extends lit_element_s {
         signal
       });
       const endTime = performance.now();
+      // Allow to modify response
+      let resolveModifiedResponse; // Create a promise that will be resolved from the event listener
+      const modifiedResponsePromise = new Promise(resolve => {
+        resolveModifiedResponse = resolve;
+      });
+      this.dispatchEvent(new CustomEvent('fetched-try', {
+        bubbles: true,
+        composed: true,
+        detail: {
+          request: fetchRequest,
+          response: fetchResponse,
+          resolveModifiedResponse // pass the resolver function
+        }
+      }));
+
+      fetchResponse = await modifiedResponsePromise; // Wait for the modified response
       responseClone = fetchResponse.clone(); // create a response clone to allow reading response body again (response.json, response.text etc)
       tryBtnEl.disabled = false;
       this.responseMessage = lit_html_x`${fetchResponse.statusText ? `${fetchResponse.statusText}:${fetchResponse.status}` : fetchResponse.status} <div style="color:var(--light-fg)"> Took ${Math.round(endTime - startTime)} milliseconds </div>`;
@@ -8751,6 +8767,9 @@ class ApiRequest extends lit_element_s {
         } else if (/^font\/|tar$|zip$|7z$|rtf$|msword$|excel$|\/pdf$|\/octet-stream$|^application\/vnd\./.test(contentType)) {
           this.responseIsBlob = true;
           this.responseBlobType = 'download';
+        } else if (/^image/.test(contentType)) {
+          this.responseIsBlob = true;
+          this.responseBlobType = 'image';
         } else if (/^audio|^image|^video/.test(contentType)) {
           this.responseIsBlob = true;
           this.responseBlobType = 'view';
@@ -10223,7 +10242,7 @@ function navbarTemplate() {
               </div>
               ${component.subComponents.filter(p => p.expanded !== false).map(p => lit_html_x`
                 <div class='nav-bar-path' data-action='navigate' data-content-id='cmp--${p.id}' id='link-cmp--${p.id}'>
-                  <span> ${p.name} </span>
+                  <span style = 'pointer-events: none;'> ${p.name} </span>
                 </div>`)}` : '')}` : ''}
     </nav>`}
 </nav>
@@ -11505,6 +11524,10 @@ class RapiDoc extends lit_element_s {
         type: String,
         attribute: 'page-direction'
       },
+      scrollBehavior: {
+        type: String,
+        attribute: 'scroll-behavior'
+      },
       // Main Colors and Font
       theme: {
         type: String
@@ -12049,6 +12072,9 @@ class RapiDoc extends lit_element_s {
     if (!this.matchType || !'includes regex'.includes(this.matchType)) {
       this.matchType = 'includes';
     }
+    if (!this.scrollBehavior || !'smooth, auto,'.includes(`${this.scrollBehavior},`)) {
+      this.scrollBehavior = 'auto';
+    }
     if (!this.showAdvancedSearchDialog) {
       this.showAdvancedSearchDialog = false;
     }
@@ -12379,7 +12405,7 @@ class RapiDoc extends lit_element_s {
         const gotoEl = this.shadowRoot.getElementById(tmpElementId);
         if (gotoEl) {
           gotoEl.scrollIntoView({
-            behavior: 'auto',
+            behavior: this.scrollBehavior,
             block: 'start'
           });
           if (this.updateRoute === 'true') {
@@ -12424,7 +12450,7 @@ class RapiDoc extends lit_element_s {
             this.replaceHistoryState(entry.target.id);
           }
           newNavEl.scrollIntoView({
-            behavior: 'auto',
+            behavior: this.scrollBehavior,
             block: 'center'
           });
           newNavEl.classList.add('active');
@@ -12448,7 +12474,7 @@ class RapiDoc extends lit_element_s {
         const gotoEl = this.shadowRoot.getElementById(e.target.getAttribute('href').replace('#', ''));
         if (gotoEl) {
           gotoEl.scrollIntoView({
-            behavior: 'auto',
+            behavior: this.scrollBehavior,
             block: 'start'
           });
         }
@@ -12504,7 +12530,7 @@ class RapiDoc extends lit_element_s {
       if (contentEl) {
         isValidElementId = true;
         contentEl.scrollIntoView({
-          behavior: 'auto',
+          behavior: this.scrollBehavior,
           block: 'start'
         });
       } else {
@@ -12533,7 +12559,7 @@ class RapiDoc extends lit_element_s {
         if (newNavEl) {
           if (scrollNavItemToView) {
             newNavEl.scrollIntoView({
-              behavior: 'auto',
+              behavior: this.scrollBehavior,
               block: 'center'
             });
           }
@@ -19483,7 +19509,7 @@ function getType(str) {
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("373f37ab7534d66db541")
+/******/ 		__webpack_require__.h = () => ("7225946cf514007067af")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */
