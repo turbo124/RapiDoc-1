@@ -284,6 +284,8 @@ export function getSampleValueByType(schemaObj) {
           return '2001:0db8:5b96:0000:0000:426f:8e17:642a';
         case 'uuid':
           return [u.substr(0, 8), u.substr(8, 4), `4000-8${u.substr(13, 3)}`, u.substr(16, 12)].join('-');
+        case 'byte':
+          return 'ZXhhbXBsZQ=='; // 'example' base64 encoded. See https://spec.openapis.org/oas/v3.0.0#data-types
         default:
           return '';
       }
@@ -794,6 +796,7 @@ export function schemaInObjectNotation(schema, obj, level = 0, suffix = '') {
     obj['::type'] = 'object';
     if ((Array.isArray(schema.type) && schema.type.includes('null')) || schema.nullable) {
       obj['::dataTypeLabel'] = 'object or null';
+      obj['::nullable'] = true;
     }
     obj['::deprecated'] = schema.deprecated || false;
     obj['::readwrite'] = schema.readOnly ? 'readonly' : schema.writeOnly ? 'writeonly' : '';
@@ -816,6 +819,7 @@ export function schemaInObjectNotation(schema, obj, level = 0, suffix = '') {
     obj['::type'] = 'array';
     if ((Array.isArray(schema.type) && schema.type.includes('null')) || schema.nullable) {
       obj['::dataTypeLabel'] = 'array or null';
+      obj['::nullable'] = true;
     }
     obj['::deprecated'] = schema.deprecated || false;
     obj['::readwrite'] = schema.readOnly ? 'readonly' : schema.writeOnly ? 'writeonly' : '';
